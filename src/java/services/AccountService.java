@@ -3,6 +3,7 @@ package services;
 import dataaccess.UserDB;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import models.User;
@@ -33,5 +34,52 @@ public class AccountService {
         }
         
         return null;
+    }
+    
+    public User resetPassword(String email, String path, String url) {
+        UserDB userDB = new UserDB();
+        
+        try {
+            User user = userDB.get(email);
+            
+            String to = user.getEmail();
+            String subject = "Notes App Reset Password";
+            String temmplate = path + "/emailtemplates/resetpassword.html";
+            // Create a UUID 
+            String uuid = UUID.randomUUID().toString();
+            
+            // Store in db for the user
+            user.setResetPasswordUuid(uuid);
+            userDB.update(user);
+            
+            // In the email, send the following link
+            String link = url + "?uuid=" + uuid;
+            
+            HashMap<String, String> tags = new HashMap<>();
+            tags.put("firstname", user.getFirstName());
+            tags.put("lastname", user.getLastName());
+            tags.put("link", link);
+            
+            GmailService.sendMail(to, subject, temmplate, tags);
+  
+            return user;
+        } catch (Exception e) {
+            
+        }
+        
+        return null;  
+    }
+    
+    public boolean changePassword(String uuid, String password) {
+       UserDB userDB = new UserDB();
+        try {
+            User user = userDB.getByUUID(uuid);
+            user.setPassword(password);
+            user.setResetPasswordUuid(null);
+            userDB.update(user);
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
     }
 }
